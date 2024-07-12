@@ -1,23 +1,33 @@
+import os
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
 from flask_cors import CORS
 import hashlib
-import openai
+from dotenv import load_dotenv
+from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
-OPEN_API_KEY = 'sk-proj-gayGEj6jPPzsFQ8NObYUT3BlbkFJ5M4zTPPQkNO2yzCGIHuR'
-openai.api_key = OPEN_API_KEY
+# load_dotenv()
+
+# api_key = os.getenv("OPENAI_API_KEY")
+# if api_key is None:
+#     raise ValueError("API key not found. Set the OPENAI_API_KEY environment variable.")
+
+client = OpenAI(api_key='sk-proj-4sRhKdSgBvLveqB0pGxJT3BlbkFJcrXVVPhyKq1rGDNAA6HP')
+
+print("OPEN AI API CONNECTED SUCCESSFULLY 🚀")
+
 
 uri = "mongodb+srv://vidhya:vidhya@cluster0.vur3oa1.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-client = MongoClient(uri)
-db = client.get_database('database') 
+clientdb = MongoClient(uri)
+db = clientdb.get_database('database') 
 
 users_collection = db.users
 
 try:
-    client.admin.command('ping')
+    clientdb.admin.command('ping')
     print("DB CONNECTED SUCCESSFULLY 🚀")
 except Exception as e:
     print(e)
@@ -101,16 +111,18 @@ def update_user():
 def chat():
     data = request.json
     message = data.get('message')
-    language = data.get('language')  # Retrieve the language parameter
-
-    # Generate AI response based on the message and language
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=f"Answer the following in {language} language: {message}",
+    language = data.get('language')
+    
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": f"Answer the following in {language} language:"},
+            {"role": "user", "content": message}
+        ],
         max_tokens=150
     )
-    ai_response = response.choices[0].text.strip()
     
+    ai_response = response.choices[0].message.content.strip()
     return jsonify({'response': ai_response}), 200
 
 if __name__ == '__main__':
